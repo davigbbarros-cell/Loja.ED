@@ -1,0 +1,344 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>ED FUTURE - v18 PURE</title>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;900&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+    
+    <link rel="icon" type="image/png" href="logo.png">
+    <link rel="apple-touch-icon" href="logo.png">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black">
+
+    <script>
+        window.DATA = {
+            L: [
+                {id:1, n:"Coxinha de Frango", i:"Recheio cremoso com Catupiry original.", p:8.0},
+                {id:2, n:"Macaxeira Frita", i:"Porção crocante com tempero da casa.", p:10.0},
+                {id:6, n:"Empada", i:"Massa amanteigada com recheio de frango.", p:7.5}
+            ],
+            D: [
+                {id:50, n:"Bolo de Pote", i:"Chocolate belga com leite ninho.", p:12.0},
+                {id:5, n:"Dudu Gourmet", i:"Feito com frutas naturais selecionadas.", p:6.0}
+            ],
+            C: {
+                N: [
+                    {id:101, n:"Combo Individual", i:"1 Lanche + 1 Suco 300ml.", p:15.0},
+                    {id:102, n:"Combo Individual (Empada)", i:"1 Empada + 1 Suco 300ml.", p:14.0}
+                ],
+                M: [
+                    {id:201, n:"Combo Duplo", i:"2 Lanches + 2 Sucos + 1 Doce.", p:32.0},
+                    {id:202, n:"Combo Duplo (Macaxeira)", i:"2 Macaxeiras + 2 Sucos.", p:28.0}
+                ],
+                F: [
+                    {id:301, n:"Combo Família", i:"5 Lanches + 5 Sucos + Porção G de Macaxeira.", p:85.0},
+                    {id:302, n:"Combo Gigante", i:"Variedade completa para grupos grandes.", p:150.0}
+                ]
+            }
+        };
+
+        window.app = {
+            st: { sets:1, cur:1, tempCart:[], finalCart:[], cat:'L', sub:'N', rate:0, total:0, filter:'all' },
+            
+            nav: function(id) {
+                document.querySelectorAll('.screen').forEach(s => s.style.display = 'none');
+                document.getElementById('scr-' + id).style.display = 'block';
+                window.scrollTo(0,0);
+            },
+
+            start: function() {
+                this.st.sets = parseInt(document.getElementById('main-sets').value) || 1;
+                document.getElementById('ui-tot').innerText = this.st.sets;
+                this.nav('menu');
+                this.renderMenu();
+            },
+
+            setCat: function(c) {
+                this.st.cat = c;
+                document.querySelectorAll('.tab-main').forEach(t => t.classList.remove('active'));
+                document.getElementById('cat-' + c).classList.add('active');
+                document.getElementById('sub-nav').style.display = (c === 'C') ? 'flex' : 'none';
+                this.renderMenu();
+            },
+
+            setSub: function(s) {
+                this.st.sub = s;
+                document.querySelectorAll('.tab-sub').forEach(t => t.classList.remove('active'));
+                document.getElementById('sub-' + s).classList.add('active');
+                this.renderMenu();
+            },
+
+            updQty: function(id, d) {
+                let it = this.st.tempCart.find(x => x.id === id);
+                if (!it && d > 0) {
+                    const all = [...window.DATA.L, ...window.DATA.D, ...window.DATA.C.N, ...window.DATA.C.M, ...window.DATA.C.F];
+                    this.st.tempCart.push({...all.find(x => x.id === id), q:1});
+                } else if (it) {
+                    it.q += d;
+                    if (it.q <= 0) this.st.tempCart = this.st.tempCart.filter(x => x.id !== id);
+                }
+                this.renderMenu();
+            },
+
+            renderMenu: function() {
+                const list = document.getElementById('list-items');
+                list.innerHTML = '';
+                const items = (this.st.cat === 'C') ? window.DATA.C[this.st.sub] : window.DATA[this.st.cat];
+                items.forEach(it => {
+                    const q = (this.st.tempCart.find(x => x.id === it.id) || {q:0}).q;
+                    list.innerHTML += `<div class="card">
+                        <div class="card-info"><b>${it.n}</b><p>${it.i}</p><span>R$ ${it.p.toFixed(2)}</span></div>
+                        <div class="controls">
+                            ${q > 0 ? `<button class="q-btn" onclick="app.updQty(${it.id},-1)">-</button>` : ''}
+                            <span class="qty-num">${q > 0 ? q : ''}</span>
+                            <button class="q-btn q-add" onclick="app.updQty(${it.id},1)">+</button>
+                        </div></div>`;
+                });
+                const subTotal = this.st.tempCart.reduce((a, b) => a + (b.p * b.q), 0);
+                document.getElementById('ui-sub').innerText = 'R$ ' + subTotal.toFixed(2);
+            },
+
+            confirmStep: function() {
+                if (this.st.tempCart.length === 0) return alert("Adicione um item!");
+                this.st.finalCart.push(...this.st.tempCart.map(i => ({...i})));
+                if (this.st.cur < this.st.sets) {
+                    this.st.cur++; this.st.tempCart = [];
+                    document.getElementById('ui-cur').innerText = this.st.cur;
+                    this.renderMenu();
+                } else { this.renderReview(); }
+            },
+
+            renderReview: function() {
+                this.nav('review');
+                const box = document.getElementById('review-data');
+                box.innerHTML = ''; this.st.total = 0;
+                this.st.finalCart.forEach(it => {
+                    this.st.total += (it.p * it.q);
+                    box.innerHTML += `<div class="rev-line"><span>${it.q}x ${it.n}</span><span>R$ ${(it.p*it.q).toFixed(2)}</span></div>`;
+                });
+                document.getElementById('ui-total-final').innerText = 'R$ ' + this.st.total.toFixed(2);
+                this.adjSplit(0);
+            },
+
+            mergeOrders: function() {
+                const m = [];
+                this.st.finalCart.forEach(i => {
+                    let ex = m.find(x => x.id === i.id);
+                    if(ex) ex.q += i.q; else m.push({...i});
+                });
+                this.st.finalCart = m; this.renderReview();
+                alert("Itens unificados!");
+            },
+
+            adjSplit: function(d) {
+                const inp = document.getElementById('split-num');
+                let n = parseInt(inp.value) + d;
+                if (n < 1) n = 1; if (n > 10) n = 10;
+                inp.value = n;
+                document.getElementById('split-result').innerText = n > 1 ? `R$ ${(this.st.total/n).toFixed(2)} por pessoa` : '';
+            },
+
+            setRate: function(n) {
+                this.st.rate = n;
+                document.querySelectorAll('.star').forEach((s, i) => s.classList.toggle('on', i < n));
+            },
+
+            saveFeedback: function() {
+                const msg = document.getElementById('f-msg').value;
+                const eid = document.getElementById('edit-id').value;
+                if (!msg || this.st.rate === 0) return alert("Preencha nota e comentário!");
+                let list = JSON.parse(localStorage.getItem('ed_v18') || '[]');
+                if(eid) { let idx = list.findIndex(x => x.id == eid); list[idx] = {...list[idx], msg, rate: this.st.rate}; }
+                else { list.unshift({id: Date.now(), msg, rate: this.st.rate, date: new Date().toLocaleDateString()}); }
+                localStorage.setItem('ed_v18', JSON.stringify(list));
+                location.reload();
+            },
+
+            filterMural: function(f, btn) {
+                this.st.filter = f;
+                document.querySelectorAll('.tab-f').forEach(t => t.classList.remove('active'));
+                btn.classList.add('active');
+                this.renderMuralContent();
+            },
+
+            renderMuralContent: function() {
+                const list = JSON.parse(localStorage.getItem('ed_v18') || '[]');
+                const cont = document.getElementById('mural-content');
+                cont.innerHTML = '';
+                let fil = list;
+                
+                if(this.st.filter === 'pos') fil = list.filter(x => x.rate >= 4);
+                else if(this.st.filter === 'neg') fil = list.filter(x => x.rate <= 2);
+                else if(typeof this.st.filter === 'number') fil = list.filter(x => x.rate === this.st.filter);
+                
+                if(fil.length === 0) {
+                    cont.innerHTML = '<p style="text-align:center; color:#555; font-size:0.7rem;">Nenhuma avaliação encontrada.</p>';
+                    return;
+                }
+
+                fil.forEach(r => {
+                    cont.innerHTML += `<div class="post">
+                        <div style="display:flex; justify-content:space-between">
+                            <span style="color:var(--gold)">${"★".repeat(r.rate)}</span>
+                            <button onclick="app.editReview(${r.id})" class="edit-btn">EDITAR</button>
+                        </div>
+                        <p>${r.msg}</p><small>${r.date}</small>
+                    </div>`;
+                });
+            },
+
+            editReview: function(id) {
+                const r = JSON.parse(localStorage.getItem('ed_v18')).find(x => x.id === id);
+                this.nav('feedback');
+                document.getElementById('f-msg').value = r.msg;
+                document.getElementById('edit-id').value = r.id;
+                this.setRate(r.rate);
+            }
+        };
+
+        window.onload = () => {
+            setInterval(() => {
+                const clock = document.getElementById('clock');
+                if(clock) clock.innerText = new Date().toLocaleTimeString();
+            }, 1000);
+        };
+    </script>
+
+    <style>
+        :root { --blue: #00f2fe; --green: #0ff0b3; --pink: #ff007f; --gold: #f9d423; --bg: #05051a; }
+        body { font-family: 'Orbitron', sans-serif; margin: 0; background: #020212; color: #fff; min-height: 100vh; overflow-x: hidden; }
+        .terminal-header { background: #000; padding: 12px; border-bottom: 1px solid var(--blue); color: var(--blue); display: flex; justify-content: space-between; font-family: 'Share Tech Mono'; font-size: 0.8rem; }
+        .container { max-width: 450px; margin: 0 auto; padding: 15px; }
+        .screen { display: none; animation: fadeIn 0.3s ease; }
+        header h1 { text-align: center; font-size: 1.4rem; letter-spacing: 3px; color: var(--blue); margin-bottom: 20px; }
+        
+        .logo-box { text-align: center; margin-bottom: 20px; }
+        .logo-img { width: 120px; height: 120px; border-radius: 20px; border: 2px solid var(--blue); box-shadow: 0 0 15px var(--blue); }
+
+        .btn-neon { width: 100%; padding: 16px; margin-bottom: 12px; border: none; border-radius: 10px; font-family: 'Orbitron'; font-weight: 900; cursor: pointer; color: #fff; background: linear-gradient(90deg, #00f2fe, #4facfe); }
+        .btn-sec { background: transparent; border: 1px solid var(--pink); color: var(--pink); }
+        .btn-gold { background: transparent; border: 1px solid var(--gold); color: var(--gold); }
+
+        .card { background: rgba(255,255,255,0.05); padding: 15px; border-radius: 12px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; border: 1px solid rgba(255,255,255,0.05); }
+        .card-info b { font-size: 0.85rem; color: var(--blue); display: block; }
+        .card-info p { font-size: 0.65rem; color: #888; margin: 4px 0; }
+        .price { color: var(--green); font-family: 'Share Tech Mono'; font-size: 1rem; }
+        
+        .controls { display: flex; align-items: center; gap: 10px; }
+        .q-btn { width: 32px; height: 32px; border: none; background: #222; color: #fff; border-radius: 6px; cursor: pointer; }
+        .q-add { background: var(--blue); color: #000; font-weight: bold; }
+
+        .tabs { display: flex; gap: 5px; margin-bottom: 12px; flex-wrap: wrap; }
+        .tab { flex: 1; min-width: 80px; padding: 10px; border: 1px solid var(--blue); background: #000; color: var(--blue); border-radius: 8px; font-size: 0.6rem; text-align: center; cursor: pointer; }
+        .tab.active { background: var(--blue); color: #000; font-weight: 900; }
+        .tab-f { border-color: #333; color: #777; font-size: 0.55rem; }
+        .tab-f.active { border-color: var(--blue); color: var(--blue); background: rgba(0,242,254,0.1); }
+
+        .rev-line { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #111; font-family: 'Share Tech Mono'; }
+        .star { font-size: 2.2rem; color: #111; cursor: pointer; margin: 0 2px; }
+        .star.on { color: var(--gold); }
+        textarea { width: 100%; background: #000; border: 1px solid var(--blue); border-radius: 8px; color: #fff; padding: 12px; height: 100px; }
+        
+        .post { background: rgba(255,255,255,0.03); padding: 12px; border-radius: 10px; margin-bottom: 10px; border-left: 3px solid var(--blue); }
+        .post p { font-size: 0.75rem; margin: 8px 0; color: #ccc; line-height: 1.4; }
+        .edit-btn { background: none; border: 1px solid var(--blue); color: var(--blue); font-size: 0.5rem; border-radius: 4px; padding: 3px 6px; cursor: pointer; }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+    </style>
+</head>
+<body>
+
+<div class="terminal-header">
+    <span>ED FUTURE v18</span>
+    <span id="clock">00:00:00</span>
+</div>
+
+<div class="container">
+    
+    <div id="scr-home" class="screen" style="display:block;">
+        <div class="logo-box">
+            <img src="logo.png" alt="Logo" class="logo-img">
+        </div>
+        <header><h1>ED FUTURE</h1></header>
+        <div style="text-align:center; margin-bottom:30px;">
+            <p style="font-size:0.6rem; color:var(--blue)">PESSOAS NO PEDIDO</p>
+            <input type="number" id="main-sets" value="1" style="width:80px; height:80px; background:none; border:2px solid var(--blue); border-radius:50%; color:#fff; text-align:center; font-size:2rem; font-family:'Share Tech Mono';">
+        </div>
+        <button class="btn-neon" onclick="app.start()">PEDIR AGORA</button>
+        <button class="btn-neon btn-sec" onclick="app.nav('feedback')">AVALIAR</button>
+        <button class="btn-neon btn-gold" onclick="app.nav('mural'); app.renderMuralContent()">MURAL</button>
+    </div>
+
+    <div id="scr-menu" class="screen">
+        <div style="display:flex; justify-content:space-between; font-size:0.7rem; margin-bottom:15px; font-family:'Share Tech Mono';">
+            <span style="color:var(--blue)">UNIDADE: <span id="ui-cur">1</span>/<span id="ui-tot">1</span></span>
+            <span id="ui-sub" style="color:var(--green)">R$ 0,00</span>
+        </div>
+        <div class="tabs">
+            <div id="cat-L" class="tab tab-main active" onclick="app.setCat('L')">LANCHES</div>
+            <div id="cat-C" class="tab tab-main" onclick="app.setCat('C')">COMBOS</div>
+            <div id="cat-D" class="tab tab-main" onclick="app.setCat('D')">DOCES</div>
+        </div>
+        <div id="sub-nav" class="tabs" style="display:none;">
+            <div id="sub-N" class="tab tab-sub active" onclick="app.setSub('N')">INDIVIDUAL</div>
+            <div id="sub-M" class="tab tab-sub" onclick="app.setSub('M')">DUPLO</div>
+            <div id="sub-F" class="tab tab-sub" onclick="app.setSub('F')">FAMÍLIA</div>
+        </div>
+        <div id="list-items"></div>
+        <button class="btn-neon" style="background:var(--green); color:#000; margin-top:20px" onclick="app.confirmStep()">PRÓXIMO</button>
+        <button class="btn-neon btn-sec" onclick="location.reload()">CANCELAR</button>
+    </div>
+
+    <div id="scr-review" class="screen">
+        <header><h1>RESUMO</h1></header>
+        <button class="btn-neon btn-sec" onclick="app.mergeOrders()" style="font-size:0.6rem; padding:8px;">JUNTAR DUPLICADOS</button>
+        <div id="review-data" style="margin:20px 0;"></div>
+        <div style="text-align:right; margin-bottom:20px;">
+            <span id="ui-total-final" style="font-size:1.8rem; color:var(--green); font-family:'Share Tech Mono'">R$ 0,00</span>
+        </div>
+        <div style="background:rgba(255,212,35,0.05); padding:15px; border-radius:10px; text-align:center; border:1px solid var(--gold)">
+            <p style="font-size:0.6rem; color:var(--gold); margin-top:0">DIVIDIR CONTA</p>
+            <button class="q-btn" onclick="app.adjSplit(-1)">-</button>
+            <input type="number" id="split-num" value="1" readonly style="background:none; border:none; color:#fff; width:40px; text-align:center; font-size:1.2rem;">
+            <button class="q-btn" onclick="app.adjSplit(1)">+</button>
+            <div id="split-result" style="color:var(--gold); font-size:0.8rem; margin-top:5px; font-family:'Share Tech Mono'"></div>
+        </div>
+        <button class="btn-neon" style="background:var(--green); color:#000; margin-top:20px" onclick="app.nav('fin')">FINALIZAR</button>
+    </div>
+
+    <div id="scr-feedback" class="screen">
+        <header><h1>NOTA</h1></header>
+        <div style="text-align:center">
+            <div class="star-row" style="margin-bottom:20px">
+                <span class="star" onclick="app.setRate(1)">★</span><span class="star" onclick="app.setRate(2)">★</span><span class="star" onclick="app.setRate(3)">★</span><span class="star" onclick="app.setRate(4)">★</span><span class="star" onclick="app.setRate(5)">★</span>
+            </div>
+            <textarea id="f-msg" placeholder="Diga o que achou..."></textarea>
+            <input type="hidden" id="edit-id">
+            <button class="btn-neon" style="margin-top:20px" onclick="app.saveFeedback()">PUBLICAR</button>
+            <button class="btn-neon btn-sec" onclick="location.reload()">VOLTAR</button>
+        </div>
+    </div>
+
+    <div id="scr-mural" class="screen">
+        <header><h1>MURAL</h1></header>
+        <div class="tabs" style="justify-content:center">
+            <div class="tab tab-f active" onclick="app.filterMural('all', this)">TODAS</div>
+            <div class="tab tab-f" style="color:var(--green)" onclick="app.filterMural('pos', this)">POSITIVAS</div>
+            <div class="tab tab-f" style="color:var(--pink)" onclick="app.filterMural('neg', this)">NEGATIVAS</div>
+        </div>
+        <div id="mural-content"></div>
+        <button onclick="location.reload()" class="btn-neon btn-sec" style="margin-top:20px">VOLTAR</button>
+    </div>
+
+    <div id="scr-fin" class="screen">
+        <header><h1>CONCLUÍDO</h1></header>
+        <div style="text-align:center; padding:30px">
+            <button class="btn-neon" style="background:#25d366" onclick="window.open('https://wa.me/5581900000000')">ENVIAR WHATSAPP</button>
+            <button class="btn-neon btn-sec" onclick="location.reload()">NOVO PEDIDO</button>
+        </div>
+    </div>
+
+</div>
+
+</body>
+</html>
